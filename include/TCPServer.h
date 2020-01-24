@@ -24,6 +24,10 @@ private:
    // List of TCPConn objects to manage connections
    std::list<std::unique_ptr<TCPConn>> _connlist;
 
+   
+
+   //FileFD _server_log;
+
 };
 
 

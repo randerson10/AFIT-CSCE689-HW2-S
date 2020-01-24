@@ -24,4 +24,10 @@ public:
    logfile_error(const char *what_arg):runtime_error(what_arg) {}   
 };
 
+class whitelistfile_error : public std::runtime_error {
+public:
+   whitelistfile_error(const std::string &what_arg):runtime_error(what_arg) {}
+   whitelistfile_error(const char *what_arg):runtime_error(what_arg) {}   
+};
+
 #endif

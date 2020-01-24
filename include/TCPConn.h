@@ -36,6 +36,8 @@ public:
    void getIPAddrStr(std::string &buf);
    const char *getUsernameStr() { return _username.c_str(); };
 
+   bool isIPAllowed(std::string ip); 
+
 private:
 
 
@@ -52,6 +54,8 @@ private:
    std::string _newpwd; // Used to store user input for changing passwords
 
    int _pwd_attempts = 0;
+
+   std::string _whitelist_file;
 };
 
 

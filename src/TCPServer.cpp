@@ -73,12 +73,20 @@ void TCPServer::listenSvr() {
          }
          std::cout << "***Got a connection***\n";
 
-         _connlist.push_back(std::unique_ptr<TCPConn>(new_conn));
-
          // Get their IP Address string to use in logging
          std::string ipaddr_str;
          new_conn->getIPAddrStr(ipaddr_str);
 
+         //if their IP is not on the whitelist don't allow them to connect
+         if(!new_conn->isIPAllowed(ipaddr_str)) {
+            const char *msg = "Your IP is blocked!\n";
+            new_conn->sendText(msg);
+            continue;
+         }
+
+         _connlist.push_back(std::unique_ptr<TCPConn>(new_conn));
+
+         
 
          new_conn->sendText("Welcome to the CSCE 689 Server!\n");
 

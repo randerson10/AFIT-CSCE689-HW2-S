@@ -6,11 +6,14 @@
 #include <iostream>
 #include "TCPConn.h"
 #include "strfuncts.h"
+#include "FileDesc.h"
 
 // The filename/path of the password file
 const char pwdfilename[] = "passwd";
 
-TCPConn::TCPConn(){ // LogMgr &server_log):_server_log(server_log) {
+const char whitelistfilename[] = "whitelist";
+
+TCPConn::TCPConn() : _whitelist_file(whitelistfilename) { // LogMgr &server_log):_server_log(server_log) {
 
 }
 
@@ -284,5 +287,27 @@ bool TCPConn::isConnected() {
  **********************************************************************************************/
 void TCPConn::getIPAddrStr(std::string &buf) {
    return _connfd.getIPAddrStr(buf);
+}
+
+bool TCPConn::isIPAllowed(std::string ip) {
+   FileFD whitelistfile(_whitelist_file.c_str());
+
+   if(!whitelistfile.openFile(FileFD::readfd)) {
+      throw whitelistfile_error("Could not open whitelist file for reading");
+   }
+   std::string buf = "";
+   if(whitelistfile.readStr(buf) == -1){
+      whitelistfile.closeFD();
+      throw whitelistfile_error("Error reading from whitelist file");
+   }
+
+   whitelistfile.closeFD();
+   
+   if(ip.compare(buf) == 0) {
+      return true;
+   } else {
+      return false;
+   }
+   
 }
 

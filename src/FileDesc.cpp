@@ -299,7 +299,6 @@ void TermFD::setEchoFD(bool echo) {
    hideInput(_fd, !echo);
 }
 
-
 FileFD::FileFD(const char *filename):FileDesc(), _filename(filename) {
 
 }
@@ -366,4 +365,3 @@ ssize_t FileDesc::readStr(std::string &buf) {
    buf += strbuf;
    return buf.size();
 }
-

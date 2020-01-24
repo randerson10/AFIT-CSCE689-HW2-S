@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
    // Check if the user already exists
    std::vector<uint8_t> hash, salt;
    PasswdMgr pwm("passwd");
-   
+ 
    if (pwm.checkUser(username.c_str()))
    {
       cerr << "That user already has an account.\n";
