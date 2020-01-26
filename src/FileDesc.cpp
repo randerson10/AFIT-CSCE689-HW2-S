@@ -10,6 +10,8 @@
 #include "FileDesc.h"
 #include "strfuncts.h"
 
+#include <iostream>
+
 const unsigned int bufsize = 500;
 
 FileDesc::FileDesc() {
@@ -327,6 +329,7 @@ bool FileFD::openFile(fd_file_type ftype) {
 
    return true;
 }
+
 
 /*****************************************************************************************
  * readStr - For a file FD, reads in characters until it hits a newline char. Not set up to

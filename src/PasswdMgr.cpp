@@ -104,6 +104,7 @@ bool PasswdMgr::changePasswd(const char *name, const char *passwd) {
 
 bool PasswdMgr::readUser(FileFD &pwfile, std::string &name, std::vector<uint8_t> &hash, std::vector<uint8_t> &salt)
 {
+std::cout << "IN READ USER\n";
    // Insert your perfect code here!
    int nameCount = pwfile.readStr(name);
    if(nameCount == -1)
@@ -113,10 +114,12 @@ bool PasswdMgr::readUser(FileFD &pwfile, std::string &name, std::vector<uint8_t>
       return false;
 
    int hashCount = pwfile.readBytes<uint8_t>(hash, hashlen);
+std::cout << hashCount << "\n";
    if(hashCount == -1)
       throw pwfile_error("Error reading passwd file");
 
    int saltCount = pwfile.readBytes<uint8_t>(salt, saltlen);
+std::cout << saltCount << "\n";
    if(saltCount == -1)
       throw pwfile_error("Error reading passwd file");
 
@@ -138,24 +141,63 @@ bool PasswdMgr::readUser(FileFD &pwfile, std::string &name, std::vector<uint8_t>
 
 int PasswdMgr::writeUser(FileFD &pwfile, std::string &name, std::vector<uint8_t> &hash, std::vector<uint8_t> &salt)
 {
-   int results = 0;
-
+   int results, nameCount, hashCount, saltCount, newlineCount = 0;
+   std::string newline("\n");
    // Insert your wild code here!
-   std::string buf = name + "\n";
-   
-   for(int i = 0; i < hash.size(); i++)
-      buf += hash.at(i);
 
-   buf += "\n";
 
-   for(int i = 0; i < salt.size(); i++)
-      buf += salt.at(i);
+   std::cout << hash.size() << "\n";
 
-   buf += "\n";
-
-   results = pwfile.writeFD(buf);
-   if(results == -1)
+   name += "\n";
+   nameCount = pwfile.writeFD(name);
+   if(nameCount == -1)
       throw pwfile_error("Error writting to passwd file");
+
+   results += nameCount;
+
+   for(int i = 0; i < hash.size(); i++) {
+      hashCount = pwfile.writeByte(hash.at(i));
+      if(hashCount == -1)
+         throw pwfile_error("Error writting to passwd file");
+
+      results += hashCount;
+   }
+
+   newlineCount = pwfile.writeFD(newline);
+   if(newlineCount == -1)
+      throw pwfile_error("Error writting to passwd file");
+
+   results += newlineCount;
+
+   for(int i = 0; i < salt.size(); i++) {
+      saltCount = pwfile.writeByte(salt.at(i));
+      if(saltCount == -1)
+         throw pwfile_error("Error writting to passwd file");
+
+      results += saltCount;
+   }
+
+   newlineCount = pwfile.writeFD(newline);
+   if(newlineCount == -1)
+      throw pwfile_error("Error writting to passwd file");
+
+   results += newlineCount;
+
+   // std::string buf = name + "\n";
+   
+   // for(int i = 0; i < hash.size(); i++)
+   //    buf += hash.at(i);
+
+   // buf += "\n";
+
+   // for(int i = 0; i < salt.size(); i++)
+   //    buf += salt.at(i);
+
+   // buf += "\n";
+
+   // results = pwfile.writeFD(buf);
+   // if(results == -1)
+   //    throw pwfile_error("Error writting to passwd file");
 
    return results; 
 }
@@ -177,7 +219,6 @@ int PasswdMgr::writeUser(FileFD &pwfile, std::string &name, std::vector<uint8_t>
 bool PasswdMgr::findUser(const char *name, std::vector<uint8_t> &hash, std::vector<uint8_t> &salt) {
 
    FileFD pwfile(_pwd_file.c_str());
-std::cout << "in finduser\n";
    // You may need to change this code for your specific implementation
 
    if (!pwfile.openFile(FileFD::readfd))
@@ -217,6 +258,7 @@ std::cout << "name " + n + "\n";
  *
  *    Throws: runtime_error if the salt passed in is not the right size
  *****************************************************************************************************/
+
 void PasswdMgr::hashArgon2(std::vector<uint8_t> &ret_hash, std::vector<uint8_t> &ret_salt, 
                            const char *in_passwd, std::vector<uint8_t> *in_salt) {
    // Hash those passwords!!!!
@@ -249,7 +291,6 @@ void PasswdMgr::addUser(const char *name, const char *passwd) {
    salt = generateSalt();
    hashArgon2(passhash, salt, passwd, &salt);
 
-
    FileFD pwfile(_pwd_file.c_str());
    if (!pwfile.openFile(FileFD::appendfd))
       throw pwfile_error("Could not open passwd file for writting");
@@ -258,6 +299,13 @@ void PasswdMgr::addUser(const char *name, const char *passwd) {
    writeUser(pwfile, nameString, passhash, salt);
 
 }
+
+/****************************************************************************************************
+ * generateSalt - Generates a random salt to be used in password hashing
+ * 
+ *                Returns: std char vector of size 16
+ *
+ ****************************************************************************************************/
 
 std::vector<uint8_t> PasswdMgr::generateSalt() {
    std::mt19937 rng(time(0));

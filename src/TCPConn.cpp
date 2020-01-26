@@ -10,11 +10,11 @@
 
 // The filename/path of the password file
 const char pwdfilename[] = "passwd";
-
+const char serverfilename[] = "server.log";
 const char whitelistfilename[] = "whitelist";
 
-TCPConn::TCPConn() : _whitelist_file(whitelistfilename) { // LogMgr &server_log):_server_log(server_log) {
-
+TCPConn::TCPConn() : _pwm(pwdfilename) { // LogMgr &server_log):_server_log(server_log) {
+   
 }
 
 
@@ -123,6 +123,22 @@ void TCPConn::handleConnection() {
 
 void TCPConn::getUsername() {
    // Insert your mind-blowing code here
+   std::string uname;
+
+   if (!getUserInput(uname))
+      return;
+   
+   if(!_pwm.checkUser(uname.data())) {
+      _username = uname;
+      _connfd.writeFD("Username not found...disconnecting\n");
+      log(4);
+      disconnect();
+      log(7);
+   }
+   _username = uname;
+   _status = s_passwd;
+   //getPasswd();
+
 }
 
 /**********************************************************************************************
@@ -135,6 +151,37 @@ void TCPConn::getUsername() {
 
 void TCPConn::getPasswd() {
    // Insert your astounding code here
+   std::string password;
+   _connfd.writeFD("Password: "); 
+
+   if (!getUserInput(password))
+      return;
+
+   while(_pwd_attempts < max_attempts) {
+      if(!_pwm.checkPasswd(_username.data(), password.data())) {
+         if(_pwd_attempts == 0) {
+            _connfd.writeFD("Incorrect password...try again\n");
+            _connfd.writeFD("Password: ");
+            if (!getUserInput(password))
+               return;
+         }
+         else {
+            _connfd.writeFD("Incorrect password...disconnecting\n");
+            log(5);
+            disconnect();
+            log(7);
+            return;
+         }
+         _pwd_attempts++;
+      } else {
+         break;
+      }
+   }
+
+   _status = s_menu;
+   _pwd_attempts = 0;
+   sendMenu();
+   log(6);
 }
 
 /**********************************************************************************************
@@ -210,6 +257,7 @@ void TCPConn::getMenuChoice() {
    } else if (cmd.compare("exit") == 0) {
       _connfd.writeFD("Disconnecting...goodbye!\n");
       disconnect();
+      log(7);
    } else if (cmd.compare("passwd") == 0) {
       _connfd.writeFD("New Password: ");
       _status = s_changepwd;
@@ -285,29 +333,86 @@ bool TCPConn::isConnected() {
  * getIPAddrStr - gets a string format of the IP address and loads it in buf
  *
  **********************************************************************************************/
+
 void TCPConn::getIPAddrStr(std::string &buf) {
    return _connfd.getIPAddrStr(buf);
 }
 
+/**********************************************************************************************
+ * isIPAllowed - Searches the white list file for a given IP.
+ * 
+ *    Params: ip - IP to search for.
+ * 
+ *    Returns: true if the IP was found in the white list file, false otherwise.
+ * 
+ *    Throws: whitelistfile_error for recoverable errors, runtime_error for unrecoverable types
+ **********************************************************************************************/
+
 bool TCPConn::isIPAllowed(std::string ip) {
-   FileFD whitelistfile(_whitelist_file.c_str());
+   std::string buf = "";
+   int count = 0;
+   FileFD whitelistfile(whitelistfilename);
 
    if(!whitelistfile.openFile(FileFD::readfd)) {
       throw whitelistfile_error("Could not open whitelist file for reading");
    }
-   std::string buf = "";
-   if(whitelistfile.readStr(buf) == -1){
-      whitelistfile.closeFD();
-      throw whitelistfile_error("Error reading from whitelist file");
-   }
+   
+   while((count = whitelistfile.readStr(buf)) != 0) {
+      if(count == -1){
+         whitelistfile.closeFD();
+         throw whitelistfile_error("Error reading from whitelist file");
+      }
 
-   whitelistfile.closeFD();
-   
-   if(ip.compare(buf) == 0) {
-      return true;
-   } else {
-      return false;
+      if(ip.compare(buf) == 0) {
+         whitelistfile.closeFD();
+         return true;
+      }
    }
-   
+   whitelistfile.closeFD();
+   return false;
 }
 
+/**********************************************************************************************
+ * log - Logs a message to the server log.
+ * 
+ *    Params: msg - int representing the type of log message to log
+ * 
+ *    Throws: logfile_error for recoverable errors, runtime_error for unrecoverable types
+ **********************************************************************************************/
+
+void TCPConn::log(int option) {
+   FileFD logfile(serverfilename);
+   if (!logfile.openFile(FileFD::appendfd))
+      throw logfile_error("Could not open log file for writting");
+
+   std::string msg = getTime();
+   std::string ip;
+
+   switch(option){
+      case 4: //bad username
+         _connfd.getIPAddrStr(ip);
+         msg += ": Username not recognized. Username: [" + _username + "] IP: [" + ip + "]\n";
+         break;
+      case 5: //failed to input password twice
+         _connfd.getIPAddrStr(ip);
+         msg += ": Failed to enter correct password. Username: [" + _username + "] IP: [" + ip + "]\n";
+         break;
+      case 6: //successful login
+         _connfd.getIPAddrStr(ip);
+         msg += ": Successful login. Username: [" + _username + "] IP: [" + ip + "]\n";
+         break;
+      case 7: //disconnect
+         _connfd.getIPAddrStr(ip);
+         msg += ": User disconnected. Username: [" + _username + "] IP: [" + ip + "]\n";
+         break;
+      default:
+         std::cout << "Error in log switch\n";
+         break;
+   }
+ 
+   int results = logfile.writeFD(msg);
+   if(results == -1)
+      throw logfile_error("Error writting to log file");
+
+   logfile.closeFD();
+}

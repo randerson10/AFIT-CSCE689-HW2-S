@@ -17,16 +17,14 @@ public:
    void listenSvr();
    void shutdown();
 
+   void log(int option, const std::string ip = {});
+
 private:
    // Class to manage the server socket
    SocketFD _sockfd;
  
    // List of TCPConn objects to manage connections
    std::list<std::unique_ptr<TCPConn>> _connlist;
-
-   
-
-   //FileFD _server_log;
 
 };
 

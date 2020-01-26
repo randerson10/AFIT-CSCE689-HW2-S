@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <termios.h>
+#include <time.h>
 #include "strfuncts.h"
 
 /*******************************************************************************************
@@ -59,5 +60,16 @@ int hideInput(int fd, bool hide) {
    if (tcsetattr(fd, TCSAFLUSH, &tattr) != 0)
       return -1; 
    return 0;
+}
+
+/*******************************************************************************************
+ * getTime - returns the current time as a string
+ *******************************************************************************************/
+
+std::string getTime() {
+   time_t my_time = time(NULL); 
+   std::string time(ctime(&my_time));
+   clrNewlines(time);
+   return time;
 }
 

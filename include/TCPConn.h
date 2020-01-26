@@ -2,6 +2,7 @@
 #define TCPCONN_H
 
 #include "FileDesc.h"
+#include "PasswdMgr.h"
 
 const int max_attempts = 2;
 
@@ -38,6 +39,8 @@ public:
 
    bool isIPAllowed(std::string ip); 
 
+   void log(int option);
+
 private:
 
 
@@ -55,7 +58,9 @@ private:
 
    int _pwd_attempts = 0;
 
-   std::string _whitelist_file;
+   PasswdMgr _pwm;
+
+   
 };
 
 

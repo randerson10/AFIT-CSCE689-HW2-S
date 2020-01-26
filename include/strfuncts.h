@@ -12,4 +12,6 @@ void lower(std::string &str);
 // Turns off local echo from a user's terminal
 int hideInput(int fd, bool hide);
 
+// Returns the current time as a string for logging
+std::string getTime();
 
