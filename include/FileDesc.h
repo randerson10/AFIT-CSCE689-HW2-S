@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include "exceptions.h"
 
+#include <iostream>
+
 // Manages File Descriptors by largely simplfying their interfaces for specific purposes.
 // FileDesc provides some limited functionality and could be instantiated, but child
 // classes may provide specialized capability. These include:
@@ -112,6 +114,7 @@ public:
    int writeBytes(std::vector<T> &buf) {
       int datasize = sizeof(T);
       int bufsize = datasize * buf.size();
+   std::cout << "writebytes buf size " << bufsize << "\n";
 
       unsigned char *bytebuf = new unsigned char[bufsize];
       for (unsigned int i=0; i<buf.size(); i++) {

@@ -128,6 +128,8 @@ void TCPConn::getUsername() {
    if (!getUserInput(uname))
       return;
    
+   clrNewlines(uname);
+
    if(!_pwm.checkUser(uname.data())) {
       _username = uname;
       _connfd.writeFD("Username not found...disconnecting\n");
@@ -137,7 +139,6 @@ void TCPConn::getUsername() {
    }
    _username = uname;
    _status = s_passwd;
-   //getPasswd();
 
 }
 
@@ -156,6 +157,8 @@ void TCPConn::getPasswd() {
 
    if (!getUserInput(password))
       return;
+   
+   clrNewlines(password);
 
    while(_pwd_attempts < max_attempts) {
       if(!_pwm.checkPasswd(_username.data(), password.data())) {
@@ -195,6 +198,34 @@ void TCPConn::getPasswd() {
 
 void TCPConn::changePassword() {
    // Insert your amazing code here
+   std::string passwd1, passwd2;
+
+   if(_status == s_changepwd) {
+      _connfd.writeFD("New Password: ");
+      if (!getUserInput(_newpwd))
+         return;
+   
+      clrNewlines(_newpwd);
+      _status = s_confirmpwd;
+      return;
+   } else if(_status == s_confirmpwd) {
+      _connfd.writeFD("Confirm Password: ");
+      if (!getUserInput(passwd2))
+         return;
+   
+      clrNewlines(passwd2);
+      if (passwd2.compare(_newpwd) != 0){
+         _connfd.writeFD("Passwords do not match\n"); 
+         _status = s_changepwd;
+         return;
+      }
+
+      std::cout << "passwords match\n";
+
+      _status = s_menu;
+
+   }
+
 }
 
 
@@ -259,7 +290,6 @@ void TCPConn::getMenuChoice() {
       disconnect();
       log(7);
    } else if (cmd.compare("passwd") == 0) {
-      _connfd.writeFD("New Password: ");
       _status = s_changepwd;
    } else if (cmd.compare("1") == 0) {
       msg += "You want a prediction about the weather? You're asking the wrong Phil.\n";
