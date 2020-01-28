@@ -121,10 +121,7 @@ std::cout << "start read user\n";
    if(nameCount == 0)
       return false;
 
-   newlineCount = pwfile.readStr(buf);
-   if(newlineCount == -1)
-      throw pwfile_error("Error reading passwd file");
-
+   uint8_t newline;
    int hashCount = pwfile.readBytes<uint8_t>(hash, hashlen);
    if(hashCount == -1)
       throw pwfile_error("Error reading passwd file");
@@ -133,7 +130,7 @@ std::cout << "start read user\n";
    if(saltCount == -1)
       throw pwfile_error("Error reading passwd file");
 
-   newlineCount = pwfile.readStr(buf);
+   newlineCount = pwfile.readByte(newline);
    if(newlineCount == -1)
       throw pwfile_error("Error reading passwd file");
 
