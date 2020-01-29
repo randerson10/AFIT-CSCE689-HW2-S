@@ -338,7 +338,7 @@ bool FileFD::openFile(fd_file_type ftype) {
  ******************************************************************************************/
 
 bool FileFD::createFile() {
-   if ((_fd = creat(_filename.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)) == -1)
+   if ((_fd = creat(_filename.c_str(), S_IRUSR | S_IWUSR)) == -1)
       return false;
 
    return true;
