@@ -17,7 +17,7 @@ public:
    void listenSvr();
    void shutdown();
 
-   void log(int option, const std::string ip = {});
+   void log(int option, const std::string ip = {}, const std::string username = {});
 
 private:
    // Class to manage the server socket

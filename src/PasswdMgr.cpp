@@ -31,11 +31,10 @@ PasswdMgr::~PasswdMgr() {
 
 bool PasswdMgr::checkUser(const char *name) {
    std::vector<uint8_t> passwd, salt;
-std::cout << "start check user\n";
+
    bool result = findUser(name, passwd, salt);
-std::cout << "end check user\n";
+
    return result;
-     
 }
 
 /*******************************************************************************************
@@ -55,17 +54,13 @@ bool PasswdMgr::checkPasswd(const char *name, const char *passwd) {
    std::vector<uint8_t> userhash(hashlen); // hash from the password file
    std::vector<uint8_t> passhash(hashlen); // hash derived from the parameter passwd
    std::vector<uint8_t> salt(saltlen);
-std::cout << "start check password\n";
+
    // Check if the user exists and get the passwd string
    if (!findUser(name, userhash, salt))
       return false;
 
    hashArgon2(passhash, salt, passwd, &salt);
 
-std::cout << "userhash " << userhash.data() << "\n";
-std::cout << "passhash " << passhash.data() << "\n";
-
-std::cout << "end check password\n";
    if (userhash == passhash)
       return true;
 
@@ -86,9 +81,55 @@ std::cout << "end check password\n";
  *******************************************************************************************/
 
 bool PasswdMgr::changePasswd(const char *name, const char *passwd) {
+   if (!checkUser(name)) {
+      return false;
+   }
 
-   // Insert your insane code here
-   // read everything out into a buf..then change and then rewrite everything
+   FileFD pwfile(_pwd_file.c_str());
+
+   if (!pwfile.openFile(FileFD::readfd))
+      throw pwfile_error("Could not open passwd file for reading");
+
+   std::vector<std::vector<uint8_t>> fileHashes;
+   std::vector<std::vector<uint8_t>> fileSalts;
+   std::vector<std::string> names;
+
+   bool eof = false;
+   //read passwd file and store all user data except the user that is trying to change
+   //their password
+   while (!eof) {
+      std::string uname;
+      std::vector<uint8_t> hash(hashlen);
+      std::vector<uint8_t> salt(saltlen);
+
+      if (!readUser(pwfile, uname, hash, salt)) {
+         eof = true;
+         continue;
+      }
+
+      if (uname.compare(name) != 0) {
+         names.push_back(uname);
+         fileHashes.push_back(hash);
+         fileSalts.push_back(salt);
+      }
+   }
+
+   pwfile.closeFD();
+   //remove the passwd file. this prevents issues with over writting data
+   if(remove(this->_pwd_file.c_str()) != 0) {
+      std::cout << "Error removing password file\n";
+   } 
+   //now recreate the password file
+   if (!pwfile.createFile())
+      throw pwfile_error("Could not create passwd file for writting");
+   //now add all users back in except for the one changing their password
+   for(int i = 0; i < names.size(); i++) {
+      writeUser(pwfile, names.at(i), fileHashes.at(i), fileSalts.at(i));
+   }
+
+   pwfile.closeFD();
+   //now add the user and their new password to the passwd file
+   addUser(name, passwd);
 
    return true;
 }
@@ -109,10 +150,8 @@ bool PasswdMgr::changePasswd(const char *name, const char *passwd) {
 
 bool PasswdMgr::readUser(FileFD &pwfile, std::string &name, std::vector<uint8_t> &hash, std::vector<uint8_t> &salt)
 {
-   // Insert your perfect code here!
    int newlineCount = 0;
-   std::string buf;
-std::cout << "start read user\n";
+   uint8_t newline;
 
    int nameCount = pwfile.readStr(name);
    if(nameCount == -1)
@@ -121,7 +160,6 @@ std::cout << "start read user\n";
    if(nameCount == 0)
       return false;
 
-   uint8_t newline;
    int hashCount = pwfile.readBytes<uint8_t>(hash, hashlen);
    if(hashCount == -1)
       throw pwfile_error("Error reading passwd file");
@@ -134,7 +172,6 @@ std::cout << "start read user\n";
    if(newlineCount == -1)
       throw pwfile_error("Error reading passwd file");
 
-std::cout << "end read user\n";
    return true;
 }
 
@@ -153,12 +190,8 @@ std::cout << "end read user\n";
 
 int PasswdMgr::writeUser(FileFD &pwfile, std::string &name, std::vector<uint8_t> &hash, std::vector<uint8_t> &salt)
 {
-std::cout << "start write user\n";
-   int results, nameCount, hashCount, saltCount, newlineCount = 0;
+   int results = 0, nameCount, hashCount, saltCount, newlineCount = 0;
    std::string newline("\n");
-   // Insert your wild code here!
-
-   std::cout << hash.size() << "\n";
 
    nameCount = pwfile.writeFD(name);
    if(nameCount == -1)
@@ -183,7 +216,7 @@ std::cout << "start write user\n";
       throw pwfile_error("Error writting to passwd file");
 
    results += newlineCount;
-std::cout << "end write user\n";
+
    return results; 
 }
 
@@ -202,14 +235,12 @@ std::cout << "end write user\n";
  *****************************************************************************************************/
 
 bool PasswdMgr::findUser(const char *name, std::vector<uint8_t> &hash, std::vector<uint8_t> &salt) {
-std::cout << "start find user\n";
    FileFD pwfile(_pwd_file.c_str());
    // You may need to change this code for your specific implementation
 
    if (!pwfile.openFile(FileFD::readfd))
       throw pwfile_error("Could not open passwd file for reading");
 
-   // Password file should be in the format username\n{32 byte hash}{16 byte salt}\n
    bool eof = false;
    while (!eof) {
       std::string uname;
@@ -228,7 +259,7 @@ std::cout << "start find user\n";
    hash.clear();
    salt.clear();
    pwfile.closeFD();
-std::cout << "end find user\n";
+
    return false;
 }
 
@@ -249,7 +280,7 @@ void PasswdMgr::hashArgon2(std::vector<uint8_t> &ret_hash, std::vector<uint8_t> 
    uint32_t t_cost = 2;            // 1-pass computation
    uint32_t m_cost = (1<<16);      // 64 mebibytes memory usage
    uint32_t parallelism = 1;       // number of threads and lanes
-std::cout << "start hash\n";
+
    uint8_t saltArr[saltlen];
    uint8_t hashArr[hashlen];
 
@@ -260,16 +291,14 @@ std::cout << "start hash\n";
          saltArr[i] = insalt.at(i);
       }
    } else {
+      if(in_salt->size() != saltlen) {
+         throw std::runtime_error("Passed in salt is not right size\n");
+      }
       for(int i = 0; i < saltlen; i++) {
          saltArr[i] = in_salt->at(i);
       }
    }
 
-   
-   //thwor std::runtime_error("passed in salt is not right size")
-
-   // high-level API
-   //argon2i_hash_raw(t_cost, m_cost, parallelism, in_passwd, strlen(in_passwd), static_cast<void*>(ret_salt.data()), saltlen, static_cast<void*>(ret_hash.data()), hashlen);
    argon2i_hash_raw(t_cost, m_cost, parallelism, in_passwd, strlen(in_passwd), saltArr, saltlen, hashArr, hashlen);
 
    for(int i = 0; i < hashlen; i++) {
@@ -279,7 +308,7 @@ std::cout << "start hash\n";
    for(int i = 0; i < saltlen; i++) {
       ret_salt.at(i) = saltArr[i];
    }
-std::cout << "end hash\n";
+
 }
 
 /****************************************************************************************************
@@ -294,9 +323,9 @@ void PasswdMgr::addUser(const char *name, const char *passwd) {
    std::vector<uint8_t> passhash(hashlen);
    std::vector<uint8_t> salt(saltlen);
    std::vector<uint8_t> insalt(saltlen);
-std::cout << "start add user\n";
+
    if (checkUser(name)) {
-      std::cout << "user was already found in passwd file... \n";
+      std::cout << "User was already found in passwd file...not adding\n";
       return;
    }
 
@@ -308,13 +337,9 @@ std::cout << "start add user\n";
       throw pwfile_error("Could not open passwd file for writting");
 
    std::string nameString(name);
-
-std::cout << passhash.data() << "\n";
-std::cout << nameString;
-
    writeUser(pwfile, nameString, passhash, insalt);
 
-std::cout << "end add user\n";
+   pwfile.closeFD();
 }
 
 /****************************************************************************************************
@@ -325,9 +350,9 @@ std::cout << "end add user\n";
  ****************************************************************************************************/
 
 std::vector<uint8_t> PasswdMgr::generateSalt() {
+   //https://www.guyrutenberg.com/2014/05/03/c-mt19937-example/
    std::mt19937 rng(time(0));
-   //std::uniform_int_distribution<int> gen(33, 126);
-   std::uniform_int_distribution<int> gen(65, 90);
+   std::uniform_int_distribution<int> gen(33, 126);
    std::vector<uint8_t> salt;
 
    for(int i = 0; i < 16; i++){

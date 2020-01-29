@@ -114,7 +114,6 @@ public:
    int writeBytes(std::vector<T> &buf) {
       int datasize = sizeof(T);
       int bufsize = datasize * buf.size();
-   std::cout << "writebytes buf size " << bufsize << "\n";
 
       unsigned char *bytebuf = new unsigned char[bufsize];
       for (unsigned int i=0; i<buf.size(); i++) {
@@ -191,6 +190,7 @@ public:
    enum fd_file_type {readfd, writefd, appendfd};
 
    bool openFile(fd_file_type ftype);
+   bool createFile();
 
 private:
    std::string _filename; 

@@ -13,7 +13,7 @@ const char pwdfilename[] = "passwd";
 const char serverfilename[] = "server.log";
 const char whitelistfilename[] = "whitelist";
 
-TCPConn::TCPConn() : _pwm(pwdfilename) { // LogMgr &server_log):_server_log(server_log) {
+TCPConn::TCPConn() : _pwm(pwdfilename) {
    
 }
 
@@ -98,7 +98,6 @@ void TCPConn::handleConnection() {
 
          case s_menu:
             getMenuChoice();
-
             break;
 
          default:
@@ -133,9 +132,9 @@ void TCPConn::getUsername() {
    if(!_pwm.checkUser(uname.data())) {
       _username = uname;
       _connfd.writeFD("Username not found...disconnecting\n");
-      log(4);
+      log(1);
       disconnect();
-      log(7);
+      log(4);
    }
    _username = uname;
    _status = s_passwd;
@@ -170,9 +169,9 @@ void TCPConn::getPasswd() {
          }
          else {
             _connfd.writeFD("Incorrect password...disconnecting\n");
-            log(5);
+            log(2);
             disconnect();
-            log(7);
+            log(4);
             return;
          }
          _pwd_attempts++;
@@ -184,7 +183,7 @@ void TCPConn::getPasswd() {
    _status = s_menu;
    _pwd_attempts = 0;
    sendMenu();
-   log(6);
+   log(3);
 }
 
 /**********************************************************************************************
@@ -220,10 +219,16 @@ void TCPConn::changePassword() {
          return;
       }
 
-      std::cout << "passwords match\n";
+      if(!_pwm.changePasswd(_username.c_str(), _newpwd.c_str())){
+         _connfd.writeFD("User not found in password file\n"); 
 
+      } else {
+         _connfd.writeFD("Password changed successfully\n"); 
+      }
+      
       _status = s_menu;
-
+ 
+      return;
    }
 
 }
@@ -288,7 +293,7 @@ void TCPConn::getMenuChoice() {
    } else if (cmd.compare("exit") == 0) {
       _connfd.writeFD("Disconnecting...goodbye!\n");
       disconnect();
-      log(7);
+      log(4);
    } else if (cmd.compare("passwd") == 0) {
       _status = s_changepwd;
    } else if (cmd.compare("1") == 0) {
@@ -419,19 +424,19 @@ void TCPConn::log(int option) {
    std::string ip;
 
    switch(option){
-      case 4: //bad username
+      case 1: //bad username
          _connfd.getIPAddrStr(ip);
          msg += ": Username not recognized. Username: [" + _username + "] IP: [" + ip + "]\n";
          break;
-      case 5: //failed to input password twice
+      case 2: //failed to input password twice
          _connfd.getIPAddrStr(ip);
          msg += ": Failed to enter correct password. Username: [" + _username + "] IP: [" + ip + "]\n";
          break;
-      case 6: //successful login
+      case 3: //successful login
          _connfd.getIPAddrStr(ip);
          msg += ": Successful login. Username: [" + _username + "] IP: [" + ip + "]\n";
          break;
-      case 7: //disconnect
+      case 4: //disconnect
          _connfd.getIPAddrStr(ip);
          msg += ": User disconnected. Username: [" + _username + "] IP: [" + ip + "]\n";
          break;

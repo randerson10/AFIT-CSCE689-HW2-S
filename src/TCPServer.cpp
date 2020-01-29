@@ -16,7 +16,7 @@
 
 const char serverfilename[] = "server.log";
 
-TCPServer::TCPServer() {//:_server_log(serverfilename) {
+TCPServer::TCPServer() {
 
 }
 
@@ -36,7 +36,8 @@ void TCPServer::bindSvr(const char *ip_addr, short unsigned int port) {
 
    struct sockaddr_in servaddr;
 
-   log(1);
+   //log the server started
+   log(1); 
 
    // Set the socket to nonblocking
    _sockfd.setNonBlocking();
@@ -108,6 +109,7 @@ void TCPServer::listenSvr() {
          // If the user lost connection
          if (!(*tptr)->isConnected()) {
             // Log it
+            //log(4);
 
             // Remove them from the connect list
             tptr = _connlist.erase(tptr);
@@ -151,7 +153,7 @@ void TCPServer::shutdown() {
  *    Throws: logfile_error for recoverable errors, runtime_error for unrecoverable types
  **********************************************************************************************/
 
-void TCPServer::log(int option, const std::string ip) {
+void TCPServer::log(int option, const std::string ip, const std::string username) {
    FileFD logfile(serverfilename);
    if (!logfile.openFile(FileFD::appendfd))
       throw logfile_error("Could not open log file for writting");
@@ -167,6 +169,9 @@ void TCPServer::log(int option, const std::string ip) {
          break;
       case 3: //new conn on whitelist
          msg += ": Connection from IP that is on whitelist. IP: [" + ip + "]\n";
+         break;
+      case 4: //disconnect
+         msg += ": User disconnected. Username: [" + username + "] IP: [" + ip + "]\n";
          break;
       default:
          std::cout << "Error in log switch\n";

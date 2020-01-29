@@ -330,6 +330,19 @@ bool FileFD::openFile(fd_file_type ftype) {
    return true;
 }
 
+/******************************************************************************************
+ * createFile - creates a file for reading or writing
+ *
+ *    Returns: false if the file failed to open, true otherwise
+ *
+ ******************************************************************************************/
+
+bool FileFD::createFile() {
+   if ((_fd = creat(_filename.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)) == -1)
+      return false;
+
+   return true;
+}
 
 /*****************************************************************************************
  * readStr - For a file FD, reads in characters until it hits a newline char. Not set up to
